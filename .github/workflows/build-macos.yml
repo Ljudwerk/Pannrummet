@@ -1,0 +1,72 @@
+name: Bygg macOS
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # krang-libs ligger bredvid pluginet på Macen; här hämtas det in i arbetskatalogen.
+      # Är KrangLibs-repot privat behövs en token med läsrätt (hemligheten KRANG_LIBS_TOKEN).
+      - name: Hämta krang-libs
+        uses: actions/checkout@v4
+        with:
+          repository: mikkeschiren/KrangLibs
+          path: krang-libs
+          token: ${{ secrets.KRANG_LIBS_TOKEN || github.token }}
+
+      - name: Cache för beroenden
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Konfigurera
+        run: cmake -B build -G Xcode -DKRANG_LIBS_DIR=${{ github.workspace }}/krang-libs
+
+      - name: Bygg (universal, Release)
+        run: cmake --build build --config Release --target Pannrummet_All PRRender PRSnapshot -- -quiet
+
+      - name: Renderingstest (PRRender --test)
+        run: ./build/PRRender_artefacts/Release/PRRender --test
+
+      - name: Rita panelen och stilprovet, klicktestet och panelens prestanda
+        run: |
+          mkdir -p renders
+          ./build/PRSnapshot_artefacts/Release/PRSnapshot renders/panelen.png 2 program=16
+          ./build/PRSnapshot_artefacts/Release/PRSnapshot --stilprov renders/stilprov_fabrikspanel.png 2
+          ./build/PRSnapshot_artefacts/Release/PRSnapshot --manual renders/manual
+          ./build/PRSnapshot_artefacts/Release/PRSnapshot --klicktest
+          ./build/PRSnapshot_artefacts/Release/PRSnapshot --prestanda
+
+      - name: Hämta pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+          unzip -q pluginval.zip
+
+      - name: Validera VST3 och AU (pluginval nivå 5, auval)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build/Pannrummet_artefacts/Release/AU/Pannrummet.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --skip-gui-tests --validate-in-process \
+            --validate build/Pannrummet_artefacts/Release/VST3/Pannrummet.vst3
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --skip-gui-tests --validate-in-process \
+            --validate ~/Library/Audio/Plug-Ins/Components/Pannrummet.component
+          auval -v aumf Pr89 Pnrm
+
+      - name: Spara byggen och bilder
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pannrummet-macOS
+          path: |
+            build/Pannrummet_artefacts/Release/VST3
+            build/Pannrummet_artefacts/Release/AU
+            build/Pannrummet_artefacts/Release/CLAP
+            build/Pannrummet_artefacts/Release/Standalone
+            renders
