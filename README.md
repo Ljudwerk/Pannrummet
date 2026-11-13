@@ -1,3 +1,5 @@
+<img src="docs/ljudwerk.png" alt="Ljudwerk" width="240">
+
 # Pannrummet
 
 *Modell PR-89.* Ett effektaggregat för EBM och industri: sex moduler i en fast kedja – **Grinden**, **Pressen**, **Plåten**, **Megafonen**, **Schaktet** och **Hallen** – med makrospaken **Trycket** och ett **nödstopp**. Effektplugin (VST3, AU, CLAP) med MIDI-ingång, för macOS. Syster till [Kroppsmaskinen](../kropps-maskinen).

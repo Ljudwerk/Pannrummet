@@ -15,6 +15,7 @@
 #include <krang/ui/ValueFormat.h>
 #include "../PluginProcessor.h"
 #include "stil/Stilprov.h"
+#include <krang/ui/Versaler.h>
 
 namespace pr::ui
 {
@@ -325,7 +326,7 @@ private:
     juce::String text (const juce::String& pid) const
     {
         auto* p = parameter (pid);
-        return p ? krang::ui::formatValue (*p, p->convertFrom0to1 (p->getValue())).toUpperCase() : juce::String();
+        return p ? krang::ui::versaler (krang::ui::formatValue (*p, p->convertFrom0to1 (p->getValue()))) : juce::String();
     }
 
     void uppdateraTillstand()
@@ -357,8 +358,8 @@ private:
             const auto& bank = proc.programbank;
             const auto& p = bank.program (bank.aktuellt());
             t.programNr = juce::String (bank.aktuellt() + 1).paddedLeft ('0', 2).getLastCharacters (2);
-            t.programNamn = p.namn.toUpperCase();
-            t.kategori = p.kategori.toUpperCase();
+            t.programNamn = krang::ui::versaler (p.namn);
+            t.kategori = krang::ui::versaler (p.kategori);
             sistaProgram = bank.aktuellt();
         }
         sistaTon = proc.plattTon.load();
